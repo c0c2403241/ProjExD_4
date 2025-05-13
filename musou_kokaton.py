@@ -223,7 +223,6 @@ class Enemy(pg.sprite.Sprite):
             self.state = "stop"
         self.rect.move_ip(self.vx, self.vy)
 
-
 class Score:
     """
     打ち落とした爆弾，敵機の数をスコアとして表示するクラス
