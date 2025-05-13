@@ -4,6 +4,7 @@ import random
 import sys
 import time
 import pygame as pg
+from math import atan2, degrees, cos, sin
 
 
 WIDTH = 1100  # ゲームウィンドウの幅
@@ -222,7 +223,6 @@ class Enemy(pg.sprite.Sprite):
             self.state = "stop"
         self.rect.move_ip(self.vx, self.vy)
 
-
 class Score:
     """
     打ち落とした爆弾，敵機の数をスコアとして表示するクラス
@@ -241,6 +241,40 @@ class Score:
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
 
+class Shield(pg.sprite.Sprite):
+    def __init__(self, bird, lifetime=400):
+        super().__init__()
+        self.lifetime = lifetime
+
+        # Step 1: 空のSurfaceを生成（透明背景）
+        surf = pg.Surface((20, 80), pg.SRCALPHA)
+
+        # Step 2: Surfaceにrectを描画
+        pg.draw.rect(surf, (0, 0, 255), (0, 0, 20, 80))
+
+        # Step 3: こうかとんの向きを取得（vx, vy）
+        vx, vy = bird.dire  # direは向きの単位ベクトル（タプル）
+
+        # Step 4: 角度を計算
+        angle = degrees(atan2(-vy, vx))  # yは反転
+
+        # Step 5: Surfaceを回転
+        self.image = pg.transform.rotate(surf, angle)
+
+        # Step 6: こうかとんの向きに応じて位置を調整
+        offset = pg.math.Vector2(bird.rect.width, 0).rotate(-angle)  # こうかとん1体分ずらす
+        self.rect = self.image.get_rect(center=bird.rect.center + offset)
+
+        self.bird = bird
+        self.offset = offset
+        self.angle = angle
+
+    def update(self):
+        self.lifetime -= 1
+        if self.lifetime <= 0:
+            self.kill()
+        # 防御壁を常にこうかとんの前に保つ
+        self.rect = self.image.get_rect(center=self.bird.rect.center + self.offset)
 
 def main():
     pg.display.set_caption("真！こうかとん無双")
@@ -253,6 +287,7 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    shields = pg.sprite.Group()  # 防御壁グループを追加
 
     tmr = 0
     clock = pg.time.Clock()
@@ -261,29 +296,37 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return 0
-            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_SPACE:
+                    beams.add(Beam(bird))
+                if event.key == pg.K_s and score.value >= 50 and len(shields) == 0:
+                    shields.add(Shield(bird, 400))
+                    score.value -= 50
+
         screen.blit(bg_img, [0, 0])
 
-        if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
+        if tmr % 200 == 0:  # 200フレームに1回，敵機を出現させる
             emys.add(Enemy())
 
         for emy in emys:
-            if emy.state == "stop" and tmr%emy.interval == 0:
-                # 敵機が停止状態に入ったら，intervalに応じて爆弾投下
+            if emy.state == "stop" and tmr % emy.interval == 0:
                 bombs.add(Bomb(emy, bird))
 
-        for emy in pg.sprite.groupcollide(emys, beams, True, True).keys():  # ビームと衝突した敵機リスト
-            exps.add(Explosion(emy, 100))  # 爆発エフェクト
-            score.value += 10  # 10点アップ
-            bird.change_img(6, screen)  # こうかとん喜びエフェクト
+        for emy in pg.sprite.groupcollide(emys, beams, True, True).keys():
+            exps.add(Explosion(emy, 100))
+            score.value += 10
+            bird.change_img(6, screen)
 
-        for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():  # ビームと衝突した爆弾リスト
-            exps.add(Explosion(bomb, 50))  # 爆発エフェクト
-            score.value += 1  # 1点アップ
+        for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():
+            exps.add(Explosion(bomb, 50))
+            score.value += 1
 
-        for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
-            bird.change_img(8, screen)  # こうかとん悲しみエフェクト
+        # シールドと爆弾の衝突処理
+        for bomb in pg.sprite.groupcollide(bombs, shields, True, False).keys():
+            exps.add(Explosion(bomb, 50))
+
+        for bomb in pg.sprite.spritecollide(bird, bombs, True):
+            bird.change_img(8, screen)
             score.update(screen)
             pg.display.update()
             time.sleep(2)
@@ -296,13 +339,14 @@ def main():
         emys.draw(screen)
         bombs.update()
         bombs.draw(screen)
+        shields.update()
+        shields.draw(screen)
         exps.update()
         exps.draw(screen)
         score.update(screen)
         pg.display.update()
         tmr += 1
         clock.tick(50)
-#あ
 
 if __name__ == "__main__":
     pg.init()
