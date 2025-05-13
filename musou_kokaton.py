@@ -4,6 +4,7 @@ import random
 import sys
 import time
 import pygame as pg
+from math import atan2, degrees, cos, sin
 
 
 WIDTH = 1100  # ゲームウィンドウの幅
@@ -242,24 +243,39 @@ class Score:
         screen.blit(self.image, self.rect)
 
 class Shield(pg.sprite.Sprite):
-    """
-    こうかとんを守る防御壁に関するクラス
-    """
-    def __init__(self, bird: Bird, life: int):
+    def __init__(self, bird, lifetime=400):
         super().__init__()
-        width, height = 20, bird.rect.height * 2
-        self.image = pg.Surface((width, height))
-        self.image.fill((0, 0, 255))  # 青い壁
-        self.rect = self.image.get_rect()
-        self.rect.midright = bird.rect.midleft  # こうかとんの左側に配置
-        self.life = life
+        self.lifetime = lifetime
+
+        # Step 1: 空のSurfaceを生成（透明背景）
+        surf = pg.Surface((20, 80), pg.SRCALPHA)
+
+        # Step 2: Surfaceにrectを描画
+        pg.draw.rect(surf, (0, 0, 255), (0, 0, 20, 80))
+
+        # Step 3: こうかとんの向きを取得（vx, vy）
+        vx, vy = bird.dire  # direは向きの単位ベクトル（タプル）
+
+        # Step 4: 角度を計算
+        angle = degrees(atan2(-vy, vx))  # yは反転
+
+        # Step 5: Surfaceを回転
+        self.image = pg.transform.rotate(surf, angle)
+
+        # Step 6: こうかとんの向きに応じて位置を調整
+        offset = pg.math.Vector2(bird.rect.width, 0).rotate(-angle)  # こうかとん1体分ずらす
+        self.rect = self.image.get_rect(center=bird.rect.center + offset)
+
         self.bird = bird
+        self.offset = offset
+        self.angle = angle
 
     def update(self):
-        self.life -= 1
-        self.rect.midright = self.bird.rect.midleft  # こうかとんの移動に追随
-        if self.life < 0:
+        self.lifetime -= 1
+        if self.lifetime <= 0:
             self.kill()
+        # 防御壁を常にこうかとんの前に保つ
+        self.rect = self.image.get_rect(center=self.bird.rect.center + self.offset)
 
 def main():
     pg.display.set_caption("真！こうかとん無双")
