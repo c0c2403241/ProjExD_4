@@ -272,6 +272,7 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    shields = pg.sprite.Group()  # 防御壁グループを追加
 
     tmr = 0
     clock = pg.time.Clock()
@@ -283,6 +284,9 @@ def main():
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_SPACE:
                     beams.add(Beam(bird))
+                if event.key == pg.K_s and score.value >= 50 and len(shields) == 0:
+                    shields.add(Shield(bird, 400))
+                    score.value -= 50
 
         screen.blit(bg_img, [0, 0])
 
@@ -302,6 +306,10 @@ def main():
             exps.add(Explosion(bomb, 50))
             score.value += 1
 
+        # シールドと爆弾の衝突処理
+        for bomb in pg.sprite.groupcollide(bombs, shields, True, False).keys():
+            exps.add(Explosion(bomb, 50))
+
         for bomb in pg.sprite.spritecollide(bird, bombs, True):
             bird.change_img(8, screen)
             score.update(screen)
@@ -316,12 +324,15 @@ def main():
         emys.draw(screen)
         bombs.update()
         bombs.draw(screen)
+        shields.update()
+        shields.draw(screen)
         exps.update()
         exps.draw(screen)
         score.update(screen)
         pg.display.update()
         tmr += 1
         clock.tick(50)
+
 
 if __name__ == "__main__":
     pg.init()
