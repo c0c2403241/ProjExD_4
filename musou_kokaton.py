@@ -302,7 +302,7 @@ def main():
         pg.display.update()
         tmr += 1
         clock.tick(50)
-
+#あ
 
 if __name__ == "__main__":
     pg.init()
