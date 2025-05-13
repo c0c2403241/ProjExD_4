@@ -202,7 +202,6 @@ class Explosion(pg.sprite.Sprite):
         if self.life < 0:
             self.kill()
 
-
 class Enemy(pg.sprite.Sprite):
     """
     敵機に関するクラス
