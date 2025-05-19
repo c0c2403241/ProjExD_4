@@ -429,12 +429,14 @@ def main():
         for bomb in pg.sprite.groupcollide(bombs, shields, True, False).keys():
             exps.add(Explosion(bomb, 50))
 
+        #追加機能2始
         for gravity in gravity_fields:
             for bomb in pg.sprite.spritecollide(gravity, bombs, True):
                 exps.add(Explosion(bomb, 20))
             for emy in pg.sprite.spritecollide(gravity, emys, True):
                 exps.add(Explosion(emy, 20))
                 bomb.kill()
+        #追加機能2終
 
         for bomb in pg.sprite.spritecollide(bird, bombs, True):  # こうかとんと衝突した爆弾リスト
             if bomb.active:
@@ -470,6 +472,7 @@ def main():
         pg.display.update()
         tmr += 1
         clock.tick(50)
+    #い
 
 if __name__ == "__main__":
     pg.init()
